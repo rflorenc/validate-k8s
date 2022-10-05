@@ -1,0 +1,7 @@
+apiVersion: v2
+name: netpol-gatekeeper
+description: NetworkPolicy Admission Webhook helm chart
+
+type: application
+
+version: 1.0.0
