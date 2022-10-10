@@ -1,0 +1,100 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: ingress-example
+  namespace: open-cluster-management
+  annotations:
+    policy.open-cluster-management.io/categories: CM Configuration Management
+    policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+    policy.open-cluster-management.io/standards: NIST SP 800-53
+spec:
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: ingress-example
+        spec:
+          namespaceSelector:
+            include: []
+            matchExpressions:
+              - key: argocd.argoproj.io/instance
+                operator: In
+                values:
+                  - in-cluster-bulk-test
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: networking.k8s.io/v1
+                kind: NetworkPolicy
+                metadata:
+                  name: allow-from-same-namespace
+                spec:
+                  ingress:
+                    - from:
+                        - podSelector: {}
+          remediationAction: enforce
+          severity: high
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: ingress-example2
+        spec:
+          namespaceSelector:
+            include: []
+            matchExpressions:
+              - key: argocd.argoproj.io/instance
+                operator: In
+                values:
+                  - in-cluster-bulk-test
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: networking.k8s.io/v1
+                kind: NetworkPolicy
+                metadata:
+                  name: allow-from-openshift-monitoring
+                spec:
+                  ingress:
+                    - from:
+                        - namespaceSelector:
+                            matchLabels:
+                              network.openshift.io/policy-group: monitoring
+                  podSelector: {}
+                  policyTypes:
+                    - Ingress
+          remediationAction: enforce
+          severity: high
+  remediationAction: enforce
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: placement-ingress-example
+  namespace: open-cluster-management
+spec:
+  clusterConditions:
+    - status: "True"
+      type: ManagedClusterConditionAvailable
+  clusterSelector:
+    matchExpressions:
+      - key: environment
+        operator: In
+        values:
+          - dev
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: binding-ingress-example
+  namespace: open-cluster-management
+placementRef:
+  name: placement-ingress-example
+  apiGroup: apps.open-cluster-management.io
+  kind: PlacementRule
+subjects:
+  - name: ingress-example
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy
